@@ -1,6 +1,8 @@
 #include "stm32f4xx.h"                  // Device header
 #include "SR04.h"
 
+//超声波
+
 /*
 引脚说明：
 PC6  -- TRIG(输出)

@@ -14,14 +14,12 @@ void AD_Init(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC3, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_AHB1Periph_GPIOF, ENABLE);
 	
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6|GPIO_Pin_7|GPIO_Pin_8|GPIO_Pin_9;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOF,&GPIO_InitStructure);
 	
-	
-	ADC_DeInit();//ADC复位
 	//初始化ADC_CCR寄存器
 	
 	ADC_CommonInitStruct.ADC_DMAAccessMode=ADC_DMAAccessMode_Disabled;//DMA失能
@@ -38,15 +36,20 @@ void AD_Init(void)
 	ADC_InitStructure.ADC_NbrOfConversion=1;//通道数目
 	ADC_Init(ADC3, &ADC_InitStructure);
 	
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_4, 1, ADC_SampleTime_480Cycles );//填充通道,采样时间480
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_5, 1, ADC_SampleTime_480Cycles );//填充通道
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_6, 1, ADC_SampleTime_480Cycles );//填充通道
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_7, 1, ADC_SampleTime_480Cycles );//填充通道
+	
 	ADC_Cmd(ADC3, ENABLE);
 }
 
 uint16_t  Get_ADC(uint8_t Channel)//获得某个通道值 
 {
 	
-	ADC_RegularChannelConfig(ADC3, Channel, 1, ADC_SampleTime_480Cycles );//填充通道
+	
 	ADC_SoftwareStartConv(ADC3);	
-	while(ADC_GetFlagStatus(ADC3, ADC_FLAG_EOC ) == RESET);
+	while(!ADC_GetFlagStatus(ADC3, ADC_FLAG_EOC ));
  
 	return ADC_GetConversionValue(ADC3);
 }

@@ -2,9 +2,11 @@
 #include "stm32f4xx.h"                  // Device header
 #include <stdio.h>            
 #include <stdarg.h>            
-
-
+#include "delay.h"
+#include "led.h"
+#include "OLED.h"
 char Serial_RxPacket[8];
+uint8_t Data_text;
 uint8_t Serial_RxData;
 uint8_t Serial_RxFlag;
 
@@ -25,10 +27,6 @@ void Serial_Init(void)
 	
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_USART1); 
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1); 
-
-	
-
-	
 	
 	USART_InitTypeDef USART_InitStructure;
 	USART_InitStructure.USART_BaudRate = 115200;
@@ -57,6 +55,8 @@ void Serial_Init(void)
 	
 	
 	USART_Cmd(USART1, ENABLE);
+	
+	LED_Init();
 }
 
 //
@@ -148,52 +148,75 @@ uint8_t Serial_GetRxData(void)
 	return Serial_RxData;
 }
 
+//信息接收处理
+void USART1_IRQHandler(void)
+{
+	static uint8_t RxState = 0;
+	static uint8_t pRxPacket = 0;
+	if (USART_GetITStatus(USART1, USART_IT_RXNE) == SET)
+	{
+	  uint8_t RxData = USART_ReceiveData(USART1);
+	
+		if (RxState == 0)
+		{
+			if (RxData ==0xFF)
+			{
+				RxState = 1;
+				pRxPacket = 0;
+			}
+		}
+		else if (RxState == 1)
+		{
+			Serial_RxPacket[pRxPacket] = RxData;
+			pRxPacket ++;
+			if (pRxPacket >= 4)
+			{
+				RxState = 2;
+			}
+		}
+		else if (RxState == 2)
+		{
+			if (RxData == 0x00)
+			{
+				RxState = 0;
+				Serial_RxFlag = 1;
+			}
 
-//void USART1_IRQHandler(void)
-//{
-//	static uint8_t RxState = 0;
-//	static uint8_t pRxPacket = 0;
-//	if (USART_GetITStatus(USART1, USART_IT_RXNE) == SET)
-//	{
-//		uint8_t RxData = USART_ReceiveData(USART1);
-//		
-//		if (RxState == 0)
-//		{
-//			if (RxData == '@' && Serial_RxFlag == 0)
-//			{
-//				RxState = 1;
-//				pRxPacket = 0;
-//			}
-//		}
-//		else if (RxState == 1)
-//		{
-//			if (RxData == 'r')
-//			{
-//				RxState = 2;
-//			}
-//			else
-//			{
-//				Serial_RxPacket[pRxPacket] = RxData;
-//				pRxPacket ++;
-//			}
-//		}
-//		else if (RxState == 2)
-//		{
-//			if (RxData == 'n')
-//			{
-//				RxState = 0;
-//				Serial_RxPacket[pRxPacket] = '\0';
-//				Serial_RxFlag = 1;
-//			}
-//			else
-//			{
-//				Serial_RxPacket[pRxPacket] = RxData;
-//				pRxPacket ++;
-//			}
-//			
-//		}
-//		
-//		USART_ClearITPendingBit(USART1, USART_IT_RXNE);
-//	}
-//}
+		}
+		
+		USART_ClearITPendingBit(USART1, USART_IT_RXNE);
+	}
+	
+}
+
+
+void Datapack(void)//数据包功能执行
+{
+	uint8_t i;
+	//功能数据包
+	uint8_t Data_Pack[4][4]={
+							{0x00,0x11,0x22,0x33},//
+							{0xAA,0xBB,0xCC,0xDD},//
+							{0x0A,0x0B,0x0C,0x0D},//
+							{0x1A,0x1B,0x1C,0x1D} //
+	};
+	for(i=0;i<=3;i++)
+	{
+		
+			if(Data_Pack[i][0]==Serial_RxPacket[0] & Data_Pack[i][1]==Serial_RxPacket[1] & Data_Pack[i][2]==Serial_RxPacket[2] & Data_Pack[i][3]==Serial_RxPacket[3])
+			{
+				Data_text=i;//将获取的行数储存
+			}
+	}
+	
+	switch(Data_text)//功能执行
+	{
+		case 0:OLED_ShowNum(3,1,0000,4);break;
+		case 1:OLED_ShowNum(3,1,1111,4);break;
+		case 2:OLED_ShowNum(3,1,2222,4);break;
+		case 3:OLED_ShowNum(3,1,3333,4);break;
+	}
+}
+
+
 
